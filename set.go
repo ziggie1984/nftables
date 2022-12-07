@@ -677,7 +677,6 @@ func setsFromMsg(msg netlink.Message) (*Set, error) {
 			set.HasTimeout = (flags & unix.NFT_SET_TIMEOUT) != 0
 			set.Concatenation = (flags & NFT_SET_CONCAT) != 0
 		case unix.NFTA_SET_KEY_TYPE:
-			fmt.Printf("SetType: IsMap: %t IsConcatenation: %t\n", set.IsMap, set.Concatenation)
 			nftMagic := ad.Uint32()
 			if invalidMagic, ok := validateKeyType(nftMagic); !ok {
 				return nil, fmt.Errorf("could not determine key type %+v", invalidMagic)
@@ -692,7 +691,6 @@ func setsFromMsg(msg netlink.Message) (*Set, error) {
 			}
 
 		case unix.NFTA_SET_DATA_TYPE:
-			fmt.Printf("DataType: IsMap: %t IsConcatenation: %t\n", set.IsMap, set.Concatenation)
 			nftMagic := ad.Uint32()
 			// Special case for the data type verdict, in the message it is stored as 0xffffff00 but it is defined as 1
 			if nftMagic == 0xffffff00 {
@@ -705,12 +703,14 @@ func setsFromMsg(msg netlink.Message) (*Set, error) {
 					break
 				}
 			}
+			set.KeyType.nftMagic = nftMagic
 			if invalidMagic, ok := validateKeyType(nftMagic); !ok {
 				return nil, fmt.Errorf("could not determine data type %+v", invalidMagic)
 			}
 
 		}
 	}
+	fmt.Printf("SetType: IsMap: %t IsConcatenation: %t\n", set.IsMap, set.Concatenation)
 	return &set, nil
 }
 
@@ -723,11 +723,9 @@ func validateKeyType(bits uint32) ([]uint32, bool) {
 		unpackTypes = append(unpackTypes, bits&SetConcatTypeMask)
 		bits = bits >> SetConcatTypeBits
 	}
-	fmt.Println(unpackTypes)
 	for _, t := range unpackTypes {
 		for _, dt := range nftDatatypes {
 			if t == dt.nftMagic {
-				fmt.Println("Found Type", t)
 				found = true
 			}
 		}
